@@ -1,0 +1,8 @@
+Artificial Intelligence allows computers to perform tasks
+that normally require human intelligence.
+
+Retrieval-Augmented Generation (RAG) retrieves relevant
+information from documents and uses it to answer questions.
+
+Vector databases store embeddings that help find relevant
+text based on semantic similarity.
