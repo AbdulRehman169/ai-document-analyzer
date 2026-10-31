@@ -1,0 +1,17 @@
+# Secrets
+.env
+
+# Uploaded PDFs and generated data
+uploads/
+chroma_store/
+*.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor
+.vscode/
+.idea/
