@@ -1,224 +1,425 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocAI - Document Analyzer</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>DocAI — Document Analyzer</title>
     <style>
+        :root {
+            --bg: #0b1020;
+            --surface: #141b2e;
+            --surface-2: #1c2540;
+            --border: #2a3558;
+            --text: #e6e9f2;
+            --muted: #8b93ad;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --user-bubble: #1e3a8a;
+            --ai-bubble: #1c2540;
+            --danger: #ef4444;
+        }
+
+        [data-theme="light"] {
+            --bg: #f3f5f9;
+            --surface: #ffffff;
+            --surface-2: #f1f4fa;
+            --border: #dde3ef;
+            --text: #1b2236;
+            --muted: #6b7591;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --user-bubble: #dbeafe;
+            --ai-bubble: #f1f5f9;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            color: #222;
-        }
-
-        .container {
-            display: flex;
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             height: 100vh;
+            overflow: hidden;
+            transition: background 0.2s, color 0.2s;
+            -webkit-text-size-adjust: 100%;
         }
 
-        /* Sidebar */
+        .layout { display: flex; height: 100vh; }
+
+        /* ---------- Sidebar ---------- */
         .sidebar {
-            width: 250px;
-            background: #202938;
-            color: white;
-            padding: 20px;
+            width: 270px;
+            flex-shrink: 0;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 16px;
+            gap: 12px;
         }
 
-        .sidebar h2 {
-            margin-top: 0;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            padding: 0 6px 12px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .new-chat {
+        .btn {
             display: block;
-            background: #2563eb;
-            color: white;
-            padding: 12px;
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
             text-align: center;
             text-decoration: none;
-            border-radius: 6px;
-            margin-bottom: 25px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
         }
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { background: var(--surface-2); }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 16px 6px 4px;
+        }
+
+        .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
 
         .chat-link {
             display: block;
-            color: #ddd;
+            color: var(--text);
             text-decoration: none;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+        .chat-link:hover { background: var(--surface-2); }
+        .chat-link.active { background: var(--surface-2); border-left: 3px solid var(--accent); }
 
-        .chat-link:hover {
-            background: #374151;
+        .empty-note { color: var(--muted); font-size: 13px; padding: 8px 12px; }
+
+        .theme-toggle {
+            margin-top: auto;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
+        .theme-toggle:hover { background: var(--border); }
 
-        /* Main area */
+        /* ---------- Main ---------- */
         .main {
             flex: 1;
-            padding: 30px;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 28px 36px;
+            gap: 18px;
+            overflow: hidden;
+            min-width: 0;
         }
 
-        .main h1 {
-            color: #1e40af;
+        .page-title h1 { margin: 0; font-size: 26px; font-weight: 700; }
+        .page-title p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 20px;
         }
 
-        .upload-box {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
+        .card h3 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
 
-        input, button {
-            padding: 10px;
-            margin-top: 10px;
-        }
+        .upload-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
-        button {
-            background: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 5px;
+        input[type="file"] {
+            flex: 1;
+            min-width: 200px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        input[type="file"]::file-selector-button {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-right: 12px;
             cursor: pointer;
         }
 
-        /* Chat messages */
+        .docs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .doc-chip {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            word-break: break-all;
+        }
+        .muted { color: var(--muted); font-size: 13px; margin: 0; }
+
         .messages {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            min-height: 250px;
-        }
-
-        .message {
-            margin-bottom: 20px;
-            padding: 12px;
-            border-radius: 8px;
-        }
-
-        .question {
-            background: #dbeafe;
-        }
-
-        .answer {
-            background: #f1f5f9;
-        }
-
-        .chat-form {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .chat-form input {
             flex: 1;
-            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            min-height: 0;
         }
-        .clear_history{
+
+        .bubble {
+            max-width: 78%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 14.5px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+        }
+        .bubble .who {
             display: block;
-            background: #2563eb;
-            color: white;
-            padding: 12px;
-            text-align: center;
-            text-decoration: none;
-            border-radius: 6px;
-            margin-bottom: 25px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .bubble-user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; }
+        .bubble-ai { align-self: flex-start; background: var(--ai-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+
+        .empty-state { margin: auto; text-align: center; color: var(--muted); font-size: 14px; }
+
+        .ask-form { display: flex; gap: 10px; }
+        .ask-form input[type="text"] {
+            flex: 1;
+            min-width: 0;
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 13px 16px;
+            font-size: 16px; /* 16px stops iOS from zooming on focus */
+            outline: none;
+        }
+        .ask-form input[type="text"]:focus { border-color: var(--accent); }
+        .ask-form button { width: auto; padding: 13px 26px; }
+
+        /* ---------- Tablet ---------- */
+        @media (max-width: 1024px) {
+            .main { padding: 24px; }
+        }
+
+        /* ---------- Mobile ---------- */
+        @media (max-width: 768px) {
+            body { height: auto; min-height: 100vh; overflow: auto; }
+            .layout { flex-direction: column; height: auto; min-height: 100vh; }
+
+            /* Sidebar becomes a top bar */
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                padding: 14px 14px 12px;
+                gap: 10px;
+            }
+            .brand { font-size: 18px; padding: 0 2px 8px; border-bottom: none; }
+
+            .sidebar-actions { display: flex; gap: 8px; }
+            .sidebar-actions .btn { width: auto; flex: 1; padding: 12px 10px; }
+
+            .section-label { display: none; }
+
+            .chat-list {
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: hidden;
+                gap: 8px;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .chat-link {
+                flex-shrink: 0;
+                max-width: 180px;
+                padding: 8px 12px;
+                border: 1px solid var(--border);
+                border-radius: 999px;
+                font-size: 13px;
+            }
+            .chat-link.active { border-left: 1px solid var(--accent); background: var(--surface-2); }
+            .empty-note { padding: 4px 0; font-size: 13px; }
+
+            .theme-toggle { margin-top: 0; padding: 12px; }
+
+            /* Main content */
+            .main {
+                flex: none;
+                padding: 16px;
+                gap: 14px;
+                overflow: visible;
+                height: auto;
+            }
+            .page-title h1 { font-size: 22px; }
+            .page-title p { font-size: 13px; }
+
+            .card { padding: 14px; }
+            .upload-row { flex-direction: column; align-items: stretch; gap: 10px; }
+            input[type="file"] { min-width: 0; width: 100%; }
+            .upload-row .btn { width: 100%; padding: 13px; }
+
+            .messages {
+                flex: none;
+                min-height: 320px;
+                max-height: 60vh;
+                padding: 14px;
+            }
+            .bubble { max-width: 92%; font-size: 14px; padding: 10px 13px; }
+            .empty-state { padding: 30px 0; }
+
+            .ask-form { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); }
+            .ask-form input[type="text"] { padding: 14px; }
+            .ask-form button { padding: 14px 18px; }
+        }
+
+        /* ---------- Small phones ---------- */
+        @media (max-width: 380px) {
+            .sidebar-actions { flex-direction: column; }
+            .ask-form { flex-direction: column; }
+            .ask-form button { width: 100%; }
         }
     </style>
 </head>
-
 <body>
-
-<div class="container">
+<div class="layout">
 
     <!-- Sidebar -->
-    <div class="sidebar">
-        <h2>📄 DocAI</h2>
-        <a href="/clear_history" class="clear_history"> clear History</a>
-        <a href="/new_chat" class="new-chat">
-            + New Chat
-        </a>
+    <aside class="sidebar">
+        <div class="brand">📄 DocAI</div>
 
-        <h3>Previous Chats</h3>
+        <div class="sidebar-actions" style="display:flex; flex-direction:column; gap:10px;">
+            <a href="/new_chat" class="btn btn-primary">+ New Chat</a>
+            <a href="/clear_history" class="btn btn-ghost"
+               onclick="return confirm('Delete all chats and documents?');">Clear History</a>
+        </div>
 
-        {% for chat in conversations %}
-            <a class="chat-link"
-               href="/chat/{{ chat['id'] }}">
-                {{ chat['title'] }}
-            </a>
-        {% endfor %}
-    </div>
+        <div class="section-label">Previous Chats</div>
+        <div class="chat-list">
+            {% for chat in conversations %}
+                <a href="/chat/{{ chat['id'] }}"
+                   class="chat-link {% if chat['id'] == active_id %}active{% endif %}"
+                   title="{{ chat['title'] }}">
+                    {{ chat['title'] }}
+                </a>
+            {% else %}
+                <div class="empty-note">No chats yet.</div>
+            {% endfor %}
+        </div>
 
-    <!-- Main Content -->
-    <div class="main">
+        <button class="btn theme-toggle" id="themeToggle" type="button">🌙 Dark mode</button>
+    </aside>
 
-        <h1>AI Document Analyzer</h1>
-        <p>Upload your PDF and ask questions about its content.</p>
+    <!-- Main -->
+    <main class="main">
 
-        <!-- PDF Upload -->
-        <div class="upload-box">
+        <header class="page-title">
+            <h1>AI Document Analyzer</h1>
+            <p>Upload a document and ask questions about its content.</p>
+        </header>
+
+        <section class="card">
             <h3>Upload Document</h3>
-
-            <form action="/upload"
-                  method="POST"
-                  enctype="multipart/form-data">
-
-                <input type="file" name="pdf" accept=".pdf" required>
-
-                <button type="submit">Upload PDF</button>
+            <form action="/upload" method="POST" enctype="multipart/form-data" class="upload-row">
+                <input type="file" name="file"
+                       accept=".pdf,.docx,.doc,.txt,.jpg,.jpeg,.png" required>
+                <button type="submit" class="btn btn-primary" style="width:auto; padding:11px 20px;">Upload File</button>
             </form>
 
-            <h4>Uploaded Documents</h4>
+            <div style="margin-top:14px;">
+                <div class="muted" style="margin-bottom:8px;">Uploaded in this chat</div>
+                <div class="docs">
+                    {% for document in documents %}
+                        <span class="doc-chip">📄 {{ document['filename'] }}</span>
+                    {% else %}
+                        <span class="muted">No documents uploaded yet.</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
 
-            {% for document in documents %}
-                <p>📄 {{ document['filename'] }}</p>
-            {% else %}
-                <p>No documents uploaded yet.</p>
-            {% endfor %}
-        </div>
-
-        <!-- Conversation -->
-        <div class="messages">
-
-            <h3>Conversation</h3>
-
+        <section class="messages" id="messages">
             {% for message in messages %}
-
-                <div class="message question">
-                    <strong>You:</strong>
-                    <p>{{ message['question'] }}</p>
+                <div class="bubble bubble-user">
+                    <span class="who">You</span>
+                    {{ message['question'] }}
                 </div>
-
-                <div class="message answer">
-                    <strong>DocAI:</strong>
-                    <p>{{ message['answer'] }}</p>
+                <div class="bubble bubble-ai">
+                    <span class="who">DocAI</span>
+                    {{ message['answer'] }}
                 </div>
-
             {% else %}
-                <p>Start by uploading a PDF and asking a question.</p>
+                <div class="empty-state">
+                    <div style="font-size:32px; margin-bottom:8px;">💬</div>
+                    Upload a document, then ask your first question.
+                </div>
             {% endfor %}
+        </section>
 
-        </div>
-
-        <!-- Ask Question -->
-        <form action="/ask"
-              method="POST"
-              class="chat-form">
-
-            <input type="text"
-                   name="question"
-                   placeholder="Ask something about your PDF..."
-                   required>
-
-            <button type="submit">Send</button>
+        <form action="/ask" method="POST" class="ask-form">
+            <input type="text" name="question"
+                   placeholder="Ask something about your document..." required autocomplete="off">
+            <button type="submit" class="btn btn-primary">Send</button>
         </form>
 
-    </div>
+    </main>
 </div>
 
+<script>
+    // Keep the newest message in view
+    const messages = document.getElementById("messages");
+    messages.scrollTop = messages.scrollHeight;
+
+    // Theme toggle, remembered across visits
+    const root = document.documentElement;
+    const toggle = document.getElementById("themeToggle");
+
+    function applyTheme(theme) {
+        root.setAttribute("data-theme", theme);
+        toggle.textContent = theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode";
+    }
+
+    applyTheme(localStorage.getItem("docai-theme") || "dark");
+
+    toggle.addEventListener("click", () => {
+        const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        localStorage.setItem("docai-theme", next);
+        applyTheme(next);
+    });
+</script>
 </body>
 </html>

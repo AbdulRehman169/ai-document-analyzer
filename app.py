@@ -3,25 +3,23 @@ import uuid
 import sqlite3
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader, UnstructuredImageLoader, UnstructuredWordDocumentLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+load_dotenv()
 
 embedding_model = GoogleGenerativeAIEmbeddings(
     model="models/gemini-embedding-001",
     google_api_key=os.getenv("GEMINI_API_KEY")
 )
 
-load_dotenv()
-
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 if not app.secret_key:
     raise RuntimeError("FLASK_SECRET_KEY is missing from your .env file.")
-
 UPLOAD_FOLDER = "uploads"
 CHROMA_DIR = "chroma_store"
 DB_FILE = "docanalyzer.db"
@@ -32,7 +30,6 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=os.getenv("GEMINI_API_KEY")
 )
 splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-
 prompt = ChatPromptTemplate.from_template("""
 You are a professional document analyst.
 Answer the question based ONLY on the context below.
@@ -119,7 +116,6 @@ def index():
                            documents=documents,
                            active_id=cid)
 
-
 @app.route("/new_chat")
 def new_chat():
     new_conversation()
@@ -140,32 +136,48 @@ def clear_history():
     conn.execute("DELETE FROM conversations")
     conn.commit()
     conn.close()
-    session.pop("conversation_id", None)
+    session.pop("conversation_id", None) #we use this pop to remove the conversation_id from the session, effectively clearing the current conversation.
     return redirect(url_for("index"))
 
 
 @app.route("/upload", methods=["POST"])
 def upload():
     cid = current_conversation()
-    pdf = request.files.get("pdf")
-    if not pdf or pdf.filename == "":
+    file = request.files.get("file")
+    
+    if not file or file.filename == "":
         return redirect(url_for("index"))
-    if not pdf.filename.lower().endswith(".pdf"):
-        return "Please upload a PDF file.", 400
+    if not file.filename.lower().endswith((".pdf", ".docx", ".doc", ".txt", ".jpg", ".jpeg", ".png")):
+        return "Please upload a valid file.", 400
+    path = os.path.join(UPLOAD_FOLDER, f"{cid}_{file.filename}")
+    file.save(path)
+    if os.path.getsize(path) == 0:
+        return "Uploaded file is empty.", 400
+    try:
+        if file.filename.lower().endswith(".pdf"):
+            chunks = splitter.split_documents(PyPDFLoader(path).load())
+        elif file.filename.lower().endswith(".docx"):
+            chunks = splitter.split_documents(Docx2txtLoader(path).load())
+        elif file.filename.lower().endswith((".jpg", ".jpeg", ".png")):
+            chunks = splitter.split_documents(UnstructuredImageLoader(path).load())
+        elif file.filename.lower().endswith(".doc"):
+            chunks = splitter.split_documents(UnstructuredWordDocumentLoader(path).load())
+        elif file.filename.lower().endswith(".txt"):
+            chunks = splitter.split_documents(TextLoader(path).load())
+        else:
+            return "Unsupported file type.", 400
+    except Exception as e:
+        return f"Error processing file: {str(e)}", 500
 
-    path = os.path.join(UPLOAD_FOLDER, f"{cid}_{pdf.filename}")
-    pdf.save(path)
-
-    chunks = splitter.split_documents(PyPDFLoader(path).load())
     for chunk in chunks:
-        chunk.metadata["source_file"] = pdf.filename
+        chunk.metadata["source_file"] = file.filename
     get_vectordb(cid).add_documents(chunks)
 
     conn = db()
     conn.execute("INSERT INTO documents (conversation_id, filename) VALUES (?, ?)",
-                 (cid, pdf.filename))
+                 (cid, file.filename))
     conn.execute("UPDATE conversations SET title=? WHERE id=? AND title='New chat'",
-                 (pdf.filename, cid))
+                 (file.filename, cid))
     conn.commit()
     conn.close()
     return redirect(url_for("index"))
@@ -180,7 +192,7 @@ def ask():
 
     results = get_vectordb(cid).similarity_search(question, k=4)
     if not results:
-        answer = "Please upload a PDF first."
+        answer = "Please upload a valid file first."
     else:
         context = "\n\n".join(r.page_content for r in results)
         answer = (prompt | llm).invoke(
@@ -197,4 +209,3 @@ def ask():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
-    
